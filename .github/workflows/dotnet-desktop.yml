@@ -1,0 +1,42 @@
+name: Build and Upload EXE
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+    env:
+      Solution_Name: SistemaInventarioColchones.sln
+      Project_Path: SistemaInventarioColchones.csproj
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore NuGet packages
+      run: dotnet restore $env:Solution_Name
+
+    - name: Nuget restore (legacy)
+      run: nuget restore $env:Solution_Name
+
+    - name: Build .NET project
+      run: dotnet build $env:Project_Path --configuration Release
+
+    - name: Find EXE file
+      run: |
+        echo "##[set-output name=exe_path;]$(Get-ChildItem -Path . -Filter *.exe -Recurse | Where-Object { $_.FullName -like '*\bin\Release*' } | Select-Object -First 1 | % FullName)"
+      id: find_exe
+
+    - name: Upload EXE artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: MyApp-EXE
+        path: ${{ steps.find_exe.outputs.exe_path }}
